@@ -157,7 +157,7 @@ impl OpentelemetryLogBuilder {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```no_run
     /// use logforth::append::opentelemetry::OpentelemetryLogBuilder;
     ///
     /// let builder = OpentelemetryLogBuilder::new("my_service", "http://localhost:4317");
@@ -314,5 +314,24 @@ impl Visitor for KvExtractor<'_> {
         let key = key.into().into_owned();
         let value = value.into().into_owned();
         self.record.add_attribute(key, value);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OpentelemetryLogBuilder;
+    use super::OpentelemetryWireProtocol;
+
+    /// The HTTP exporter needs an explicit client feature in otlp 0.31; without one `build()`
+    /// fails with `NoHttpClient`, which only surfaces when a user enables the appender.
+    #[test]
+    fn test_http_exporter_builds() {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let log = runtime.block_on(async {
+            OpentelemetryLogBuilder::new("test", "http://127.0.0.1:4318/v1/logs")
+                .protocol(OpentelemetryWireProtocol::HttpJson)
+                .build()
+        });
+        assert!(log.is_ok(), "{:?}", log.err());
     }
 }
